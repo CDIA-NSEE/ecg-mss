@@ -4,6 +4,8 @@ from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
 
+from core.helpers.enum import UserType
+
 
 class ReportType(Enum):
     NORMAL = "ECG normal"
@@ -68,6 +70,7 @@ class User(BaseModel):
     name: str
     email: str
     password: str
+    type: UserType
     created_at: datetime = datetime.now(UTC)
 
 

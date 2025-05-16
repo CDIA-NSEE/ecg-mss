@@ -1,5 +1,3 @@
-from typing import Optional
-
 import boto3
 from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
 
