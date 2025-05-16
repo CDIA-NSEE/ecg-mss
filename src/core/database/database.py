@@ -1,11 +1,13 @@
-import boto3
 from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
+
+from core.infra.aws import AWS
+from core.config.env import ENV
 
 
 class Database:
     def __init__(self):
-        self.dynamodb = boto3.resource("dynamodb")
-        self.table = self.dynamodb.Table("nsee-ecg")
+        self.dynamodb = AWS.get_dynamodb_resource()
+        self.table = self.dynamodb.Table(ENV.DYNAMO_TABLE)
 
     @staticmethod
     def serialize(item: dict) -> dict:

@@ -1,2 +1,7 @@
+pytz
 boto3
+PyJWT
+fastapi
+uvicorn
 pydantic
+python-dotenv

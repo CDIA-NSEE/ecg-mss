@@ -1,5 +1,6 @@
+from pytz import UTC
 from enum import Enum
-from datetime import datetime, UTC
+from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 
