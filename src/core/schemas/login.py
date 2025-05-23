@@ -8,3 +8,9 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     access_token: str
+
+
+class MeResponse(BaseModel):
+    name: str
+    email: str
+    created_at: str

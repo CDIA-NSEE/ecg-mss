@@ -15,10 +15,8 @@ time.sleep(2)
 print("Conectando ao DynamoDB Local...")
 dynamodb = boto3.resource(
     'dynamodb',
-    endpoint_url='http://dynamodb-local:8000',
     region_name='us-east-1',
-    aws_access_key_id='fake',
-    aws_secret_access_key='fake'
+    endpoint_url='http://dynamodb-local:8000'
 )
 
 print("Criando tabela exemplo...")
@@ -41,10 +39,8 @@ except Exception as e:
 print("Conectando ao MinIO...")
 s3 = boto3.client(
     's3',
-    endpoint_url='http://minio:9000',
-    aws_access_key_id='nsee',
-    aws_secret_access_key='nsee',
-    region_name='us-east-1'
+    region_name='us-east-1',
+    endpoint_url='http://minio:9000'
 )
 
 print("Criando bucket exemplo...")
@@ -85,3 +81,9 @@ for user in test_users:
         print(f"Usuário '{user.email}' criado com sucesso.")
     except Exception as e:
         print(f"Erro ao criar usuário '{user.email}': {e}")
+
+# Disconnecting from DynamoDB and MinIO
+print("Desconectando do DynamoDB Local...")
+dynamodb.meta.client.close()
+print("Desconectando do MinIO...")
+s3.close()

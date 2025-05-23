@@ -2,58 +2,58 @@ version: '3.8'
 
 services:
   dynamodb-local:
-    image: amazon/dynamodb-local
-    container_name: dynamodb_local
-    restart: unless-stopped
-    user: root
+    image: amazon/dynamodb-local:latest
+    container_name: dynamodb-local
     ports:
       - "8000:8000"
-    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
     volumes:
-      - dynamodb_data:/home/dynamodblocal/data
+      - ./dynamodb_data:/data/
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
     networks:
-      - localstack-net
-    environment:
-      - DYNAMO_TABLE=${DYNAMO_TABLE}
+      - local-aws-net
 
   minio:
-    image: minio/minio
+    image: minio/minio:latest
     container_name: minio
     ports:
       - "9000:9000"
       - "9001:9001"
+    volumes:
+      - ./minio_data:/data
     environment:
-      MINIO_ROOT_USER: nsee
-      MINIO_ROOT_PASSWORD: nsee
-      BUCKET_NAME: ${BUCKET_NAME}
+      MINIO_ROOT_USER: nseeadmin
+      MINIO_ROOT_PASSWORD: nseeadmin
     command: server /data --console-address ":9001"
-    volumes:
-      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     networks:
-      - localstack-net
+      - local-aws-net
 
-  init:
-    image: python:3.11
-    container_name: aws_local_init
+  setup-script:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: setup-script
     depends_on:
-      - dynamodb-local
-      - minio
-    volumes:
-      - ./init:/app
-    working_dir: /app
-    command: [ "sh", "init.sh" ]
-    networks:
-      - localstack-net
+      dynamodb-local:
+        condition: service_started
+      minio:
+        condition: service_healthy
     environment:
-      DYNAMO_TABLE: ${DYNAMO_TABLE}
-      BUCKET_NAME: ${BUCKET_NAME}
-      AWS_ACCESS_KEY_ID: minio
-      AWS_SECRET_ACCESS_KEY: minio
-
-volumes:
-  dynamodb_data:
-  minio_data:
+      - BUCKET_NAME=${BUCKET_NAME:-meu-bucket-local-compose}
+      - DYNAMO_TABLE=${DYNAMO_TABLE:-minha-tabela-local-compose}
+      - AWS_ACCESS_KEY_ID=nseeadmin
+      - AWS_SECRET_ACCESS_KEY=nseeadmin
+      - AWS_DEFAULT_REGION=us-east-1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+    networks:
+      - local-aws-net
 
 networks:
-  localstack-net:
+  local-aws-net:
     driver: bridge

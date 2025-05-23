@@ -4,6 +4,8 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 
+from core.helpers.transform import decimal_to_number
+
 
 class ReportType(Enum):
     NORMAL = "ECG normal"
@@ -81,6 +83,7 @@ class User(BaseModel):
 
     @classmethod
     def from_dynamo(cls, data: dict) -> "User":
+        data = decimal_to_number(data)
         return cls(
             name=data["name"],
             email=data["email"],
@@ -103,6 +106,7 @@ class EcgReportStatus(BaseModel):
 
     @classmethod
     def from_dynamo(cls, data: dict) -> "EcgReportStatus":
+        data = decimal_to_number(data)
         return cls(
             status=data["status"],
             created_at=datetime.fromtimestamp(data["created_at"], tz=UTC),
@@ -130,6 +134,7 @@ class EcgReportSegmentation(BaseModel):
 
     @classmethod
     def from_dynamo(cls, data: dict) -> "EcgReportSegmentation":
+        data = decimal_to_number(data)
         return cls(
             category=ReportSegmentationType(data["category"]),
             segmentation=data["segmentation"],
@@ -165,6 +170,7 @@ class EcgReport(BaseModel):
             if data.get("report_segmentation")
             else None
         )
+        data = decimal_to_number(data)
         return cls(
             report=ReportType(data["report"]),
             report_segmentation=report_segmentation,
@@ -206,6 +212,7 @@ class EcgExam(BaseModel):
 
     @classmethod
     def from_dynamo(cls, data: dict) -> "EcgExam":
+        data = decimal_to_number(data)
         return cls(
             id=data["PK"].split("#")[1],
             file_path=data["file_path"],

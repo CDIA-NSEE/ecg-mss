@@ -11,11 +11,11 @@ class UserRepo(IUserRepo):
 
     def get_user_by_email(self, email: str) -> Optional[User]:
         """Get user by email"""
-        user = self.table.get_item(
-            Key={
-                "PK": f"USER#{email}"
-            }
-        )
+        user = self.table.query(
+            KeyConditionExpression="PK = :pk",
+            ExpressionAttributeValues={":pk": f"USER#{email}"},
+        ).get("Items", [None])[0]
+        print(user)
         if user:
             return User.from_dynamo(user)
         return None

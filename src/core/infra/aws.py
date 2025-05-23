@@ -8,11 +8,9 @@ class AWS:
     def get_dynamodb_resource():
         if ENV.STAGE == "test":
             return boto3.resource(
-                "dynamodb",
-                endpoint_url="http://dynamodb-local:8000",
-                region_name="us-east-1",
-                aws_access_key_id="fake",
-                aws_secret_access_key="fake",
+                'dynamodb',
+                region_name='us-east-1',
+                endpoint_url='http://localhost:8000',
             )
         return boto3.resource("dynamodb")
 
