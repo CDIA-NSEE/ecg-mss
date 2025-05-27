@@ -40,6 +40,17 @@ async def fastapi_request_to_lambda_event(
     }
 
 
+def number_to_decimal(value: Any) -> Any:
+    if isinstance(value, (int, float)):
+        return Decimal(value)
+    elif isinstance(value, list):
+        return [number_to_decimal(item) for item in value]
+    elif isinstance(value, dict):
+        return {key: number_to_decimal(val) for key, val in value.items()}
+    else:
+        return value
+
+
 def decimal_to_number(value: Any) -> Any:
     if isinstance(value, Decimal):
         return float(value) if value % 1 else int(value)

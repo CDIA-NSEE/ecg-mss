@@ -1,3 +1,5 @@
+from datetime import datetime
+from decimal import Decimal
 from typing import Optional, Tuple, Literal, List
 
 from core.database.database import Database
@@ -8,7 +10,7 @@ from core.entities import EcgExam, EcgReport
 class ExamRepo(IExamRepo):
     def __init__(self, db: Database):
         self.db = db
-        self.dynamo = db.dynamodb
+        self.dynamo = db.table
 
     def get_exam_by_id(self, exam_id: str) -> Optional[EcgExam]:
         """Get exam by ID"""
@@ -17,6 +19,45 @@ class ExamRepo(IExamRepo):
             exam = self.db.deserialize(exam)
             return EcgExam.from_dynamo(exam)
         return None
+
+    def get_next_ecg_exam(self) -> Optional[EcgExam]:
+        """Get the next ECG exam that is not approved and available for reporting"""
+        try:
+            ten_minutes_ago = datetime.now().timestamp() - (10 * 60)
+
+            exams = self.dynamo.query(
+                IndexName="type-index",
+                KeyConditionExpression="#type = :type",
+                ExpressionAttributeNames={
+                    "#type": "type",  # alias for the reserved word
+                    "#approved": "approved",
+                    "#is_reporting": "is_reporting",
+                    "#reporting_started_at": "reporting_started_at",
+                },
+                ExpressionAttributeValues={
+                    ":type": "ECG_EXAM",
+                    ":approved": Decimal(0),
+                    ":is_reporting": Decimal(0),
+                    ":true": Decimal(1),
+                    ":ten_minutes_ago": Decimal(ten_minutes_ago)
+                },
+                FilterExpression=(
+                    "#approved = :approved AND ("
+                    "  #is_reporting = :is_reporting OR "
+                    "  (#is_reporting = :true AND #reporting_started_at < :ten_minutes_ago)"
+                    ")"
+                ),
+                Limit=1
+            )
+
+            if exams and exams.get("Items"):
+                return EcgExam.from_dynamo(exams["Items"][0])
+
+            return None
+
+        except Exception as e:
+            print(f"Error getting next ECG exam: {e}")
+            return None
 
     def create_exam(self, exam: EcgExam) -> bool:
         """Create a new exam"""
@@ -31,12 +72,7 @@ class ExamRepo(IExamRepo):
     def update_exam(self, exam: EcgExam) -> bool:
         """Update an existing exam"""
         try:
-            self.dynamo.update_item(
-                key={"exam_id": exam.exam_id},
-                update_expression="SET #status = :status",
-                expression_attribute_names={"#status": "status"},
-                expression_attribute_values={":status": exam.status}
-            )
+            self.dynamo.put_item(Item=exam.to_dynamo())
             return True
         except Exception as e:
             print(f"Error updating exam: {e}")

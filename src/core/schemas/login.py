@@ -14,3 +14,4 @@ class MeResponse(BaseModel):
     name: str
     email: str
     created_at: str
+    role: str

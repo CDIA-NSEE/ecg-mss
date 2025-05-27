@@ -1,9 +1,13 @@
 import os
 import time
+from datetime import datetime
+
 import boto3
 from typing import List
-from populate_user import User
 from dotenv import load_dotenv
+from pytz import UTC
+
+from populate_entities import User, UserRole, EcgExam, Gender, ReportType, EcgReport
 
 load_dotenv()
 
@@ -21,17 +25,59 @@ dynamodb = boto3.resource(
 
 print("Criando tabela exemplo...")
 try:
+    # Create the table
     table = dynamodb.create_table(
         TableName=dynamodb_table_name,
-        KeySchema=[{'AttributeName': 'PK', 'KeyType': 'HASH'}, {'AttributeName': 'SK', 'KeyType': 'RANGE'}],
-        AttributeDefinitions=[
-            {'AttributeName': 'PK', 'AttributeType': 'S'},
-            {'AttributeName': 'SK', 'AttributeType': 'N'}
+        KeySchema=[
+            {
+                'AttributeName': 'PK',
+                'KeyType': 'HASH'
+            },
+            {
+                'AttributeName': 'SK',
+                'KeyType': 'RANGE'
+            }
         ],
-        ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+        GlobalSecondaryIndexes=[
+            {
+                'IndexName': 'type-index',
+                'KeySchema': [
+                    {
+                        'AttributeName': 'type',
+                        'KeyType': 'HASH'
+                    }
+                ],
+                'Projection': {
+                    'ProjectionType': 'ALL'
+                },
+                'ProvisionedThroughput': {
+                    'ReadCapacityUnits': 5,
+                    'WriteCapacityUnits': 5
+                }
+            }
+        ],
+        AttributeDefinitions=[
+            {
+                'AttributeName': 'PK',
+                'AttributeType': 'S'
+            },
+            {
+                'AttributeName': 'SK',
+                'AttributeType': 'N'
+            },
+            {
+                'AttributeName': 'type',
+                'AttributeType': 'S'
+            }
+        ],
+        ProvisionedThroughput={
+            'ReadCapacityUnits': 5,
+            'WriteCapacityUnits': 5
+        }
     )
     table.wait_until_exists()
     print(f"Tabela '{dynamodb_table_name}' criada com sucesso.")
+    print("Index available:", [index['IndexName'] for index in table.global_secondary_indexes])
 except Exception as e:
     table = dynamodb.Table(dynamodb_table_name)
     print(f"Tabela já existe ou erro: {e}")
@@ -53,7 +99,27 @@ except Exception as e:
 # Criando usuários de teste
 print("Criando usuários de teste...")
 test_users: List[User] = [
-    User(name="Felipe Carillo", email="felipecarillo@nsee.imt", password="1234"),
+    User(name="Felipe Carillo", email="felipecarillo@nsee.imt", password="1234", role=UserRole.DOCTOR),
+    User(name="Íris Melero", email="irismelero@nsee.imt", password="1234", role=UserRole.DOCTOR),
+    User(name="Douglas", email="douglas@nsee.imt", password="1234", role=UserRole.DOCTOR),
+    User(name="Dr. Paulo", email="paulo@nsee.imt", password="1234", role=UserRole.DOCTOR),
+]
+
+print("Criando exames de teste...")
+test_exams: List[EcgExam] = [
+    EcgExam(
+        id="exam1",
+        file_path="exams/exam1.ecg",
+        made_at=datetime.now(UTC),
+        gender=Gender.MALE,
+        birth_date="1990-01-01",
+        amplitude="1.0",
+        speed="25",
+        reports=[EcgReport(
+            report=ReportType.ALTERACOES_INESPECIFICAS_ST_T,
+            created_at=datetime.now(UTC),
+        )]
+    )
 ]
 
 
@@ -82,7 +148,15 @@ for user in test_users:
     except Exception as e:
         print(f"Erro ao criar usuário '{user.email}': {e}")
 
-# Disconnecting from DynamoDB and MinIO
+for exam in test_exams:
+    try:
+        exam_dynamo = exam.to_dynamo()
+        print(exam_dynamo)
+        table.put_item(Item=exam_dynamo)
+        print(f"Exame '{exam.id}' criado com sucesso.")
+    except Exception as e:
+        print(f"Erro ao criar exame '{exam.id}': {e}")
+
 print("Desconectando do DynamoDB Local...")
 dynamodb.meta.client.close()
 print("Desconectando do MinIO...")

@@ -23,7 +23,8 @@ class UseCase:
         return MeResponse(
             name=user.name,
             email=user.email,
-            created_at=datetime.strftime(user.created_at, "%d/%m/%Y %H:%M:%S")
+            created_at=datetime.strftime(user.created_at, "%d/%m/%Y %H:%M:%S"),
+            role=user.role.value
         )
 
 

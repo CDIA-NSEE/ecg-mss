@@ -1,10 +1,32 @@
+from decimal import Decimal
+
 from pytz import UTC
 from enum import Enum
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Any
 
-from core.helpers.transform import decimal_to_number, number_to_decimal
+
+def number_to_decimal(value: Any) -> Any:
+    if isinstance(value, (int, float)):
+        return Decimal(value)
+    elif isinstance(value, list):
+        return [number_to_decimal(item) for item in value]
+    elif isinstance(value, dict):
+        return {key: number_to_decimal(val) for key, val in value.items()}
+    else:
+        return value
+
+
+def decimal_to_number(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return float(value) if value % 1 else int(value)
+    elif isinstance(value, list):
+        return [decimal_to_number(item) for item in value]
+    elif isinstance(value, dict):
+        return {key: decimal_to_number(val) for key, val in value.items()}
+    else:
+        return value
 
 
 class ReportType(Enum):
@@ -61,9 +83,9 @@ class ReportSegmentationType(Enum):
 
 
 class Gender(Enum):
-    male = "Masculino"
-    female = "Feminino"
-    other = "Outro"
+    MALE = "Masculino"
+    FEMALE = "Feminino"
+    OTHER = "Outro"
 
 
 class UserRole(Enum):
@@ -101,15 +123,6 @@ class User(BaseModel):
             role=UserRole(data["role"])
         )
 
-    def to_dict(self):
-        return {
-            "name": self.name,
-            "email": self.email,
-            "password": self.password,
-            "role": self.role.value,
-            "created_at": self.created_at.strftime("%d/%m/%Y %H:%M:%S"),
-        }
-
 
 class EcgReportStatus(BaseModel):
     status: bool
@@ -132,13 +145,6 @@ class EcgReportStatus(BaseModel):
             created_at=datetime.fromtimestamp(data["created_at"], tz=UTC),
             created_by=User.from_dynamo(data["created_by"]),
         )
-
-    def to_dict(self):
-        return {
-            "status": self.status,
-            "created_at": self.created_at.strftime("%d/%m/%Y %H:%M:%S"),
-            "created_by": self.created_by.to_dict() if self.created_by else None,
-        }
 
 
 class EcgReportSegmentation(BaseModel):
@@ -172,16 +178,6 @@ class EcgReportSegmentation(BaseModel):
             created_at=datetime.fromtimestamp(data["created_at"], tz=UTC),
         )
 
-    def to_dict(self):
-        return {
-            "category": self.category.value,
-            "segmentation": self.segmentation,
-            "bbox": self.bbox,
-            "area": self.area,
-            "iscrowd": self.iscrowd,
-            "created_at": self.created_at.strftime("%d/%m/%Y %H:%M:%S"),
-        }
-
 
 class EcgReport(BaseModel):
     report: ReportType
@@ -209,13 +205,6 @@ class EcgReport(BaseModel):
             report_segmentation=report_segmentation,
             created_at=datetime.fromtimestamp(data["created_at"], tz=UTC)
         )
-
-    def to_dict(self):
-        return {
-            "report": self.report.value,
-            "report_segmentation": self.report_segmentation.to_dict() if self.report_segmentation else None,
-            "created_at": self.created_at.strftime("%d/%m/%Y %H:%M:%S"),
-        }
 
 
 class EcgExam(BaseModel):
@@ -271,22 +260,3 @@ class EcgExam(BaseModel):
             principal_report=EcgReport.from_dynamo(data["principal_report"]) if data.get("principal_report") else None,
             reports=[EcgReport.from_dynamo(report) for report in data.get("reports", [])],
         )
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "file_path": self.file_path,
-            "made_at": self.made_at.strftime("%d/%m/%Y %H:%M:%S"),
-            "gender": self.gender.value,
-            "birth_date": self.birth_date,
-            "amplitude": self.amplitude,
-            "speed": self.speed,
-            "approved": self.approved,
-            "approved_at": self.approved_at.strftime("%d/%m/%Y %H:%M:%S") if self.approved_at else None,
-            "is_reporting": self.is_reporting,
-            "reporting_started_at": self.reporting_started_at.strftime(
-                "%d/%m/%Y %H:%M:%S") if self.reporting_started_at else None,
-            "principal_report": self.principal_report.to_dict() if self.principal_report else None,
-            "reports": [report.to_dict() for report in self.reports],
-            "type": "ECG_EXAM",
-        }

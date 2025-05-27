@@ -1,12 +1,13 @@
 import json
 
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from modules.auth.me import lambda_handler as me_lambda_handler
-from core.helpers.transform import fastapi_request_to_lambda_event
 from modules.auth.login import lambda_handler as login_lambda_handler
-from core.schemas.login import LoginResponse, LoginRequest, MeResponse
+
+from core.schemas.login import LoginResponse, MeResponse
+from core.helpers.transform import fastapi_request_to_lambda_event
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
